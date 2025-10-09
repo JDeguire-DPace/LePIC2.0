@@ -6,9 +6,11 @@ set(CMAKE_Fortran_COMPILER mpiifx)   # or mpiifort / ifx / ifort
 
 # Optimization flags (analogous to your C++ line)
 set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -xHost -qopenmp -ipo -fast -qmkl -Wall")
+set(CMAKE_Fortran_FLAGS_RELEASE "-O3 -ipo -no-prec-div -m64 -xHost -qopenmp -auto -fp-model fast=2 -unroll -qmkl")
 
 # Fortran standard
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
+
 set(CMAKE_Fortran_STANDARD 2008)
 set(CMAKE_Fortran_STANDARD_REQUIRED ON)
 
@@ -16,16 +18,13 @@ set(CMAKE_Fortran_STANDARD_REQUIRED ON)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod)
 
 # Gather all sources automatically
-file(GLOB_RECURSE SRC_FILES src/*.F90)
+file(GLOB_RECURSE SRC_FILES src/*.f90)
 
 # Create the executable
-add_executable(pic3D ${SRC_FILES})
+add_executable(run_pic3D ${SRC_FILES})
 
 # Link to libraries (optional)
 find_package(MPI REQUIRED)
 find_package(OpenMP REQUIRED)
 
-target_link_libraries(pic3D PRIVATE MPI::MPI_Fortran OpenMP::OpenMP_Fortran)
-
-# If you use MKL
-# target_link_options(pic1d PRIVATE -qmkl)
+target_link_libraries(run_pic3D PRIVATE MPI::MPI_Fortran OpenMP::OpenMP_Fortran)
