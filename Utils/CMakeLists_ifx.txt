@@ -1,0 +1,47 @@
+cmake_minimum_required(VERSION 3.25)
+project(LePIC_3D LANGUAGES Fortran)
+
+# --- Compiler setup ----------------------------------------------------------
+set(CMAKE_Fortran_COMPILER mpiifx)           # Use Intel MPI + ifx
+set(CMAKE_Fortran_STANDARD 2008)
+set(CMAKE_Fortran_STANDARD_REQUIRED ON)
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod)
+
+# --- Output executable in root ----------------------------------------------
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+# --- Optimization flags ------------------------------------------------------
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g -traceback -check all -warn all -debug extended -fpe0 -fstack-security-check )
+else()
+    add_compile_options( -O3 -xHost -ipo -qopenmp -m64 -no-prec-div -fp-model fast=2 -unroll-aggressive )
+endif()
+
+# --- Source discovery --------------------------------------------------------
+file(GLOB_RECURSE SRC_MODULES    "${CMAKE_SOURCE_DIR}/Src/modules/*.f90")
+file(GLOB_RECURSE SRC_SUBMODULES "${CMAKE_SOURCE_DIR}/Src/submodules/*.f90")
+set(SRC_MAIN "${CMAKE_SOURCE_DIR}/Src/main.f90")
+
+# --- Executable target -------------------------------------------------------
+add_executable(pic3D ${SRC_MAIN} ${SRC_MODULES} ${SRC_SUBMODULES})
+
+# --- Optional MKL linking ----------------------------------------------------
+# Use MKL automatically if available (for Poisson solvers)
+find_package(MKL QUIET)
+if(MKL_FOUND)
+    target_link_libraries(pic3d PRIVATE MKL::MKL)
+endif()
+
+# --- Optional OpenMP (shared-memory parallelism) -----------------------------
+find_package(OpenMP QUIET)
+if(OpenMP_Fortran_FOUND)
+    target_link_libraries(pic3d PRIVATE OpenMP::OpenMP_Fortran)
+endif()
+
+# --- Display summary ---------------------------------------------------------
+message(STATUS "----------------------------------------------")
+message(STATUS "Fortran compiler : ${CMAKE_Fortran_COMPILER}")
+message(STATUS "Build type       : ${CMAKE_BUILD_TYPE}")
+message(STATUS "Executable       : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pic3d")
+message(STATUS "Modules dir      : ${CMAKE_Fortran_MODULE_DIRECTORY}")
+message(STATUS "----------------------------------------------")

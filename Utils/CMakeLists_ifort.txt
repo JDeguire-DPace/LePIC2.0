@@ -1,0 +1,52 @@
+cmake_minimum_required(VERSION 3.25)
+project(LePIC_3D LANGUAGES Fortran)
+
+# --- Choose compiler (optional: you can also pass -DCMAKE_Fortran_COMPILER=mpiifort on the cmake command) ---
+set(CMAKE_Fortran_COMPILER mpiifort)
+
+# --- Language/standard & .mod output ---
+set(CMAKE_Fortran_STANDARD 2008)
+set(CMAKE_Fortran_STANDARD_REQUIRED ON)
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/mod)
+
+# --- Put the built executable in the project root ---
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+# --- Build-type-specific flags for ifort/mpiifort ---
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g -traceback -check all -warn all -debug extended -fpe0 -fstack-security-check )
+else()
+    add_compile_options(-O3 -ipo -xHost -m64-qopenmp -no-prec-div -fp-model fast=2-unroll-aggressive )
+endif()
+
+# --- Source discovery (your ./Src layout) ---
+file(GLOB_RECURSE SRC_MODULES    "${CMAKE_SOURCE_DIR}/Src/modules/*.f90")
+file(GLOB_RECURSE SRC_SUBMODULES "${CMAKE_SOURCE_DIR}/Src/submodules/*.f90")
+set(SRC_MAIN "${CMAKE_SOURCE_DIR}/Src/main.f90")
+
+# --- Target ---
+add_executable(pic3d ${SRC_MAIN} ${SRC_MODULES} ${SRC_SUBMODULES})
+
+# --- MKL (optional) ---
+# EITHER rely on oneAPI envs and just use the convenience switch:
+# target_compile_options(pic3d PRIVATE -qmkl=parallel)
+# target_link_options(pic3d PRIVATE -qmkl=parallel)
+#
+# OR use CMake's MKL package if available:
+find_package(MKL QUIET)
+if(MKL_FOUND)
+    target_link_libraries(pic3d PRIVATE MKL::MKL)
+else()
+    # Fallback: try quick switch if MKL is in the environment
+    target_link_options(pic3d PRIVATE -qmkl=parallel)
+endif()
+
+# --- Summary ---
+message(STATUS "----------------------------------------------")
+message(STATUS "Compiler          : ${CMAKE_Fortran_COMPILER}")
+message(STATUS "Build type        : ${CMAKE_BUILD_TYPE}")
+message(STATUS "Executable        : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pic3d")
+message(STATUS "Fortran .mod dir  : ${CMAKE_Fortran_MODULE_DIRECTORY}")
+message(STATUS "Modules count     : ${CMAKE_SOURCE_DIR}/Src/modules/*.f90")
+message(STATUS "Submodules count  : ${CMAKE_SOURCE_DIR}/Src/submodules/*.f90")
+message(STATUS "----------------------------------------------")
