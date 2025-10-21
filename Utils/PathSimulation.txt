@@ -1,0 +1,4 @@
+Conditions = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/conditions.inp
+Particles = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/special.dat
+Geometry = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/geometry.inp
+Boundary = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/boundary.inp
