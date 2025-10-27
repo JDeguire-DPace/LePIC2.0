@@ -5,12 +5,15 @@ from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QFileDialog,
     QVBoxLayout, QMessageBox
 )
+from PySide6.QtGui import QCursor
 from PySide6.QtCore import Qt
 
 # --- Directories ---
 START_DIR = os.getcwd()                                  # where the user runs the script
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # where the script resides
 OUTPUT_FILE = os.path.join(SCRIPT_DIR, "PathSimulation.txt")  # always written next to SetupGUI.py
+INPUT_DIR = os.path.join(SCRIPT_DIR, START_DIR +"/Inputs")
+os.makedirs(INPUT_DIR, exist_ok=True)  
 
 class LePICSetup(QWidget):
     def __init__(self):
@@ -51,11 +54,12 @@ class LePICSetup(QWidget):
             ("Select particle data file", "Particles"),
             ("Select geometry file", "Geometry"),
             ("Select boundary file", "Boundary"),
+            ("Select field file", "Field")
         ]
 
         for title, key in prompts:
             file_path, _ = QFileDialog.getOpenFileName(
-                self, title, START_DIR, "All Files (*.*)"
+                self, title, INPUT_DIR, "All Files (*.*)"
             )
             if not file_path:
                 QMessageBox.warning(self, "LePIC", f"{key} file not selected. Aborting setup.")

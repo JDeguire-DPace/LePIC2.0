@@ -1,0 +1,36 @@
+! Conditions particles
+5. ! ElectronTemperature (eV)
+1.d15 ! ElectronDensity_0 (m-3)
+1.d20 ! GasDensity (m-3)
+-200 ! np_cell: number of particles per cell (<0 for no background plasma)
+
+! Condtions Solver
+6 ! # of levels in MG solver
+1.d-7, 1.6d0 ! Min. precision in residual, w for SOR [1.6]
+
+! Conditions heating
+3.5 6.5 3.5 6.5 0. 100. ! Particle heating region x<, x>, y<, y>, z<, z> [cm]
+10. ! Particle loading region [cm]
+-60.d3 -1.d8 ! Pabs(W) (<0 to turn off), Heating frequency (<0 == off)
+5.d-3 3 ! Inject current I(A) (<0 == off), options [1=fixed, 2= equal to ion losses, 3= e-beam (+Z), 4= emissive cath. (+Z), <0 cosine]
+
+! Conditions time
+1.d-3 ! t_max(s)
+0.5  ! time coeff. k ; dt= k*dx/vt
+
+! Conditions output/Restart
+1000 ! frequency for saving data (<0 does not reset averaging)
+-1000 -100 100.d-6 150.e-6 ! Frequency for simulation backup (<0 no averaging), # of plots (<0 off), time window [t1,t2]
+no 1 0. 10. 0. 100. 1 0. 10. ! Save pdf (y/n), ptype, yl, yr, zl, zr (cm), # of regions n_rg, xl & xr for each n_rg
+no 24 2 1. ! Restart (yes/no/external),  # of OMP threads, # of MPI, coefficient for particle duplication/removal
+
+! Extra features of the code
+1.d0 ! k_eps0 (<0 iterative P, I_inj or Vgrd)
+no 0.8 0.8 1 2 2 ! Holes (y/n), Lhy*Lhz(cm), ny*nz holes, (PE) grid index
+0. 5. 3 1.d-6 ! jH-(mA/cm2) from H on PE surface, TH-(eV), characteristics of neg. ions on grid # [index], dielectric capacitance Ca/S (Fd/m2)
+-0.18 2 no 400. 2.d6 200. 60.d6 ! Secondary emission coeff (<0 == off), grid index, RF (yes/no), phi0(V), f0(Hz), phi1(V), f1(Hz) 
+
+
+
+END
+

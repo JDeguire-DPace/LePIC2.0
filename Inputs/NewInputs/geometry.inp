@@ -1,0 +1,8 @@
+192 192 1024 ! n: nx=2**n, ny=2**n. Number of grid points [2**7,2**3]
+
+5 ! Number of wall labels, [ngrid+1:ngrid+2] is used for dielectric BC's (<0 do not save 3D density and potential maps)
+10. 10. -53.3 ! Box size: xmax, ymax, zmax
+0. 0.  0. 10. 10. 53.3 1 ! (x<,y<,z<), (x>,y>,z>), V 
+0. 0. 53.3 10. 10. 53.3 -2  ! x> negatif: dielectric in YZ plane
+0. 0. 0. 10. 10. 0. -3 ! y> negatif: dielectric in XZ plane, z> negatif: z=1 and n+1 set as periodic BC's
+
