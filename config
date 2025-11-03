@@ -1,3 +1,6 @@
 rm -rf build
-cmake -S . -B build -D CMAKE_Fortran_COMPILER=mpiifx
+cmake -S . -B build \
+  -DCMAKE_Fortran_COMPILER=mpiifx \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DHDF5_ROOT=/opt/hdf5-ifx
 cmake --build build -j

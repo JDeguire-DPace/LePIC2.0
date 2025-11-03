@@ -2,7 +2,7 @@
 5. ! ElectronTemperature (eV)
 1.d15 ! ElectronDensity_0 (m-3)
 1.d20 ! GasDensity (m-3)
--200 ! np_cell: number of particles per cell (<0 for no background plasma)
+5 ! np_cell: number of particles per cell (<0 for no background plasma)
 
 ! Condtions Solver
 6 ! # of levels in MG solver

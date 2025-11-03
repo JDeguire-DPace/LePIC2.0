@@ -4,6 +4,7 @@ module mod_functionsText
     PRIVATE
 
     public parse_path, parse_value_after_equal, split_ws
+    public next_data_line, is_single_integer,strip_inline_comment
 
     contains
         subroutine parse_path(line, filename)
@@ -37,6 +38,30 @@ module mod_functionsText
         end if
     end subroutine parse_value_after_equal
 
+    subroutine next_data_line(iu, ios)
+        implicit none
+        integer, intent(in)  :: iu
+        integer, intent(out) :: ios
+
+        character(len=1024) :: line
+        ios = 0
+
+        do
+            read(iu,'(A)',iostat=ios) line
+            if (ios /= 0) return    ! EOF or error -> exit
+
+            ! Trim whitespace
+            line = trim(adjustl(line))
+
+            ! Skip blank or comment-only lines
+            if (line == '' .or. line(1:1) == '!') cycle
+
+            ! We found a useful data line.
+            ! Rewind the read pointer one line so caller can read it properly.
+            backspace(iu)
+            exit
+        end do
+    end subroutine next_data_line
 
     subroutine split_ws(s, tokens, ntokens)
         implicit none
@@ -77,6 +102,37 @@ module mod_functionsText
             tokens(i) = ''
         end do
     end subroutine split_ws
+
+    function is_single_integer(s)
+        logical :: is_single_integer
+        character(len=*), intent(in) :: s
+        integer :: a, b, ios1, ios2
+        character(len=:), allocatable :: t
+        t = trim(adjustl(s))
+        if (len_trim(t) == 0) then
+        is_single_integer = .false.; return
+        end if
+        ! Try to read TWO ints: if that works, not a single integer line
+        ios2 = 0; read(t,*,iostat=ios2) a, b
+        if (ios2 == 0) then
+        is_single_integer = .false.; return
+        end if
+        ! Try to read ONE int: if that works, treat as sentinel
+        ios1 = 0; read(t,*,iostat=ios1) a
+        is_single_integer = (ios1 == 0)
+    end function is_single_integer
+
+    subroutine strip_inline_comment(line)
+        character(len=*), intent(inout) :: line
+        integer :: b
+        line = adjustl(line)
+        b = index(line,'!')
+        if (b == 1) then
+        line = ''
+        else if (b > 1) then
+        line = trim(line(:b-1))
+        end if
+    end subroutine strip_inline_comment
 
 
 end module mod_functionsText

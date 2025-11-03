@@ -1,4 +1,4 @@
 #!/bin/bash
-
+rm -f ./Outputs/*
 python3 Utils/SetupGUI.py
 ./build/bin/run_pic3D
