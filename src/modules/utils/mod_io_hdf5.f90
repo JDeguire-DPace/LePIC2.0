@@ -27,15 +27,15 @@ module mod_io_hdf5
   ! ==========================
   subroutine save_core_int(filename, dset, A, dims_h5, origin, spacing, nghost, replace)
     character(*),               intent(in) :: filename, dset
-    integer(int32),             intent(in) :: A(..)         ! rank-agnostic actuals will pass via wrappers
-    integer(HSIZE_T),           intent(in) :: dims_h5(:)    ! size = rank
+    integer(int32),             intent(in) :: A(..)
+    integer(HSIZE_T),           intent(in) :: dims_h5(:)
     real(real64), dimension(3), intent(in), optional :: origin, spacing
     integer(int32),             intent(in), optional :: nghost
     logical,                    intent(in), optional :: replace
 
-    integer(HID_T) :: file_id, dset_id, dspace_id, attr_id
+    integer(HID_T) :: file_id, dset_id, dspace_id
     integer        :: ierr, rank_h5, ngh, tcode
-    logical :: file_opened, exists, want_replace
+    logical :: exists, want_replace, dset_exists
 
     rank_h5 = size(dims_h5)
     ngh = 0; if (present(nghost)) ngh = nghost
@@ -43,28 +43,33 @@ module mod_io_hdf5
     tcode = 0  ! 0=int32, 1=real64
 
     call h5open_f(ierr)
-    call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, ierr)
-    file_opened = (ierr == 0)
-    if (.not. file_opened) then
+
+    ! --- decide open vs create without triggering an HDF5 error stack ---
+    inquire(file=trim(filename), exist=exists)
+    if (exists) then
+      call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, ierr)
+      if (ierr /= 0) error stop 'save_array_h5(int): h5fopen_f failed'
+    else
       call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, ierr)
-      if (ierr /= 0) error stop 'save_array_h5: h5fcreate_f failed'
+      if (ierr /= 0) error stop 'save_array_h5(int): h5fcreate_f failed'
     end if
 
-    call h5lexists_f(file_id, trim(dset), exists, ierr)
-    if (exists) then
+    ! delete if present and replace requested
+    call h5lexists_f(file_id, trim(dset), dset_exists, ierr)
+    if (dset_exists) then
       if (want_replace) then
-        call h5ldelete_f(file_id, trim(dset), ierr)
-        if (ierr /= 0) error stop 'save_array_h5: failed to delete existing dataset'
+          call h5ldelete_f(file_id, trim(dset), ierr)
+          if (ierr /= 0) error stop 'save_array_h5(int): h5ldelete_f failed'
       else
-        error stop 'save_array_h5: dataset exists; pass replace=.true. to overwrite'
+          error stop 'save_array_h5(int): dataset exists; set replace=.true.'
       end if
     end if
 
     call h5screate_simple_f(rank_h5, dims_h5, dspace_id, ierr)
-    if (ierr /= 0) error stop 'save_array_h5: h5screate_simple_f failed'
+    if (ierr /= 0) error stop 'save_array_h5(int): h5screate_simple_f failed'
 
     call h5dcreate_f(file_id, trim(dset), H5T_NATIVE_INTEGER, dspace_id, dset_id, ierr)
-    if (ierr /= 0) error stop 'save_array_h5: h5dcreate_f failed (int)'
+    if (ierr /= 0) error stop 'save_array_h5(int): h5dcreate_f failed'
 
     select rank (A)
     rank (1); call h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, A, dims_h5, ierr)
@@ -73,7 +78,7 @@ module mod_io_hdf5
     rank default
       error stop 'save_array_h5(int): unsupported rank'
     end select
-    if (ierr /= 0) error stop 'save_array_h5: h5dwrite_f failed'
+    if (ierr /= 0) error stop 'save_array_h5(int): h5dwrite_f failed'
 
     call write_attrs(dset_id, rank_h5, dims_h5, tcode, origin, spacing, ngh)
 
@@ -84,6 +89,7 @@ module mod_io_hdf5
   end subroutine save_core_int
 
 
+
   subroutine save_core_real(filename, dset, A, dims_h5, origin, spacing, nghost, replace)
     character(*),               intent(in) :: filename, dset
     real(real64),               intent(in) :: A(..)
@@ -92,9 +98,9 @@ module mod_io_hdf5
     integer(int32),             intent(in), optional :: nghost
     logical,                    intent(in), optional :: replace
 
-    integer(HID_T) :: file_id, dset_id, dspace_id, attr_id
+    integer(HID_T) :: file_id, dset_id, dspace_id
     integer        :: ierr, rank_h5, ngh, tcode
-    logical :: file_opened, exists, want_replace
+    logical :: exists, want_replace, dset_exists
 
     rank_h5 = size(dims_h5)
     ngh = 0; if (present(nghost)) ngh = nghost
@@ -102,28 +108,31 @@ module mod_io_hdf5
     tcode = 1  ! 0=int32, 1=real64
 
     call h5open_f(ierr)
-    call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, ierr)
-    file_opened = (ierr == 0)
-    if (.not. file_opened) then
+
+    inquire(file=trim(filename), exist=exists)
+    if (exists) then
+      call h5fopen_f(trim(filename), H5F_ACC_RDWR_F, file_id, ierr)
+      if (ierr /= 0) error stop 'save_array_h5(real): h5fopen_f failed'
+    else
       call h5fcreate_f(trim(filename), H5F_ACC_TRUNC_F, file_id, ierr)
-      if (ierr /= 0) error stop 'save_array_h5: h5fcreate_f failed'
+      if (ierr /= 0) error stop 'save_array_h5(real): h5fcreate_f failed'
     end if
 
-    call h5lexists_f(file_id, trim(dset), exists, ierr)
-    if (exists) then
+    call h5lexists_f(file_id, trim(dset), dset_exists, ierr)
+    if (dset_exists) then
       if (want_replace) then
-        call h5ldelete_f(file_id, trim(dset), ierr)
-        if (ierr /= 0) error stop 'save_array_h5: failed to delete existing dataset'
+          call h5ldelete_f(file_id, trim(dset), ierr)
+          if (ierr /= 0) error stop 'save_array_h5(real): h5ldelete_f failed'
       else
-        error stop 'save_array_h5: dataset exists; pass replace=.true. to overwrite'
+          error stop 'save_array_h5(real): dataset exists; set replace=.true.'
       end if
     end if
 
     call h5screate_simple_f(rank_h5, dims_h5, dspace_id, ierr)
-    if (ierr /= 0) error stop 'save_array_h5: h5screate_simple_f failed'
+    if (ierr /= 0) error stop 'save_array_h5(real): h5screate_simple_f failed'
 
     call h5dcreate_f(file_id, trim(dset), H5T_NATIVE_DOUBLE, dspace_id, dset_id, ierr)
-    if (ierr /= 0) error stop 'save_array_h5: h5dcreate_f failed (real)'
+    if (ierr /= 0) error stop 'save_array_h5(real): h5dcreate_f failed'
 
     select rank (A)
     rank (1); call h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, A, dims_h5, ierr)
@@ -132,7 +141,7 @@ module mod_io_hdf5
     rank default
       error stop 'save_array_h5(real): unsupported rank'
     end select
-    if (ierr /= 0) error stop 'save_array_h5: h5dwrite_f failed'
+    if (ierr /= 0) error stop 'save_array_h5(real): h5dwrite_f failed'
 
     call write_attrs(dset_id, rank_h5, dims_h5, tcode, origin, spacing, ngh)
 
@@ -141,6 +150,7 @@ module mod_io_hdf5
     call h5fclose_f(file_id, ierr)
     call h5close_f(ierr)
   end subroutine save_core_real
+
 
 
   subroutine write_attrs(dset_id, rank_h5, dims_h5, dtype_code, origin, spacing, nghost)

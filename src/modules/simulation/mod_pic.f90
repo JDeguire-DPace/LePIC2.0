@@ -30,8 +30,6 @@ module mod_pic
     ! ---- Geometry & boundary ----
     type(Domain)   :: dom
     type(Boundary) :: bnd
-    logical        :: has_state
-    character(len=*), parameter :: state_file = './Outputs/state.h5'
 
     ! arrays for optional reload
     integer(int32), allocatable :: bcnd(:,:,:)
@@ -66,24 +64,10 @@ module mod_pic
       call flush(output_unit)
     end if
 
-    ! ---- Boundary: load existing state.h5 or build fresh ----
-    inquire(file=state_file, exist=has_state)
-    if (has_state) then
-      if (rank_local == 0) write(output_unit,*) 'Loading boundary from ', trim(state_file)
-      call load_array_h5(state_file, 'bcnd', bcnd, origin, spacing, ngh)
-      call load_array_h5(state_file, 'phi',  phi,  origin, spacing, ngh)
-      ! populate bnd for downstream code that expects it
-      if (allocated(bnd%bcnd)) deallocate(bnd%bcnd)
-      if (allocated(bnd%phi )) deallocate(bnd%phi )
-      allocate(bnd%bcnd, source=bcnd)
-      allocate(bnd%phi ,  source=phi)
-      ! dtype/V/ngrid aren’t strictly needed for the field solve step here;
-      ! they are still available if you keep build-time info elsewhere
-    else
-      if (rank_local == 0) write(output_unit,*) 'No existing state; building boundary from geometry/boundary inputs'
-      call build_boundary(bnd, dom)
-      ! build_boundary already writes ./Outputs/state.h5 (bcnd, phi) via save_array_h5
-    end if
+    call build_boundary(bnd, dom)
+ 
+ 
+
     if (rank_local == 0) then
       write(output_unit,*) 'Boundary ready: size(bcnd)=', &
            size(bnd%bcnd,1),'x',size(bnd%bcnd,2),'x',size(bnd%bcnd,3)
