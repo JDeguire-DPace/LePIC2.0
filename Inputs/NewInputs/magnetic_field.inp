@@ -1,4 +1,19 @@
-2 ! # of magnetic field files (<0 positive ions not magnetized)
-1 192 1024 ! Grid for the magnetic field map
-n gauss 1. 100. Bz 1.d10 5. 0. 0. ! ext. file (y/n/s), name, scaling, B(G), direction, L/x0/y0/z0(cm)
-s thr 1. 100. By 1. 1.03 0. 0. ! ext. file (y/n/s), name, scaling, B(G), direction, L/x0/y0/z0(cm)
+nx1 = 256
+nx2 = 256
+nx3 = 256
+
+x1_min = 0.0
+x1_max = 0.40
+x2_min = 0.0
+x2_max = 0.40
+x3_min = 0.0
+x3_max = 0.80
+
+field_type = gaussian
+direction = x3
+
+b0 = 0.02
+l = 0.05
+x1_0 = 0.20
+x2_0 = 0.20
+x3_0 = 0.40

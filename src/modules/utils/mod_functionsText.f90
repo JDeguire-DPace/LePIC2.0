@@ -3,7 +3,7 @@ module mod_functionsText
     implicit none
     PRIVATE
 
-    public parse_path, parse_value_after_equal, split_ws
+    public parse_path, parse_value_after_equal, split_ws, to_lower
     public next_data_line, is_single_integer,strip_inline_comment
 
     contains
@@ -62,6 +62,22 @@ module mod_functionsText
             exit
         end do
     end subroutine next_data_line
+
+    pure function to_lower(str) result(out)
+        implicit none
+        character(*), intent(in) :: str
+        character(len(str))      :: out
+        integer :: i, c
+
+        do i = 1, len(str)
+            c = iachar(str(i:i))
+            if (c >= iachar('A') .and. c <= iachar('Z')) then
+            out(i:i) = achar(c + 32)   ! convert ASCII upper → lower
+            else
+            out(i:i) = str(i:i)
+            end if
+        end do
+    end function to_lower
 
     subroutine split_ws(s, tokens, ntokens)
         implicit none
