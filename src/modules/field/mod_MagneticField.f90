@@ -7,8 +7,10 @@ module mod_MagneticField
   ! Public type & procedures
   !-----------------------------
   integer, parameter, public :: MFIELD_NONE     = 0
-  integer, parameter, public :: MFIELD_GAUSSIAN = 1
-  integer, parameter, public :: MFIELD_MAP      = 2
+  integer, parameter, public :: MFIELD_GAUSSIAN_X = 1
+  integer, parameter, public :: MFIELD_GAUSSIAN_Y = 2
+  integer, parameter, public :: MFIELD_GAUSSIAN_Z = 3
+  integer, parameter, public :: MFIELD_MAP      = 4
 
   type, public :: MagneticField
     ! --- grid ---
@@ -156,15 +158,35 @@ module mod_MagneticField
     dx3 = merge( (self%x3_max-self%x3_min)/real(max(1,self%nx3-1),real64), 0.0d0, self%nx3>1 )
 
     select case (self%field_type)
-    case (MFIELD_GAUSSIAN)
+    case (MFIELD_GAUSSIAN_X)
+      comp = self%direction
+      do k = 1, self%nx3
+        do j = 1, self%nx2
+          do i = 1, self%nx1
+            x = self%x1_min + dx1*real(i-1,real64)
+            self%B(comp,i,j,k) = self%b0 * exp( -((x-self%x1_0)**2/(2*self%L**2) )) !+ (y-self%x2_0)**2 + (z-self%x3_0)**2) / (2.0d0*self%L**2) )
+          end do
+        end do
+      end do
+
+    case (MFIELD_GAUSSIAN_Y)
+      comp = self%direction
+      do k = 1, self%nx3
+        do j = 1, self%nx2
+          y = self%x2_min + dx2*real(j-1,real64)
+          do i = 1, self%nx1
+            self%B(comp,i,j,k) = self%b0 * exp( -((y-self%x2_0)**2/(2*self%L**2) ))
+          end do
+        end do
+      end do
+    
+    case (MFIELD_GAUSSIAN_Z)
       comp = self%direction
       do k = 1, self%nx3
         z = self%x3_min + dx3*real(k-1,real64)
         do j = 1, self%nx2
-          y = self%x2_min + dx2*real(j-1,real64)
           do i = 1, self%nx1
-            x = self%x1_min + dx1*real(i-1,real64)
-            self%B(comp,i,j,k) = self%b0 * exp( -((x-self%x1_0)**2 + (y-self%x2_0)**2 + (z-self%x3_0)**2) / (2.0d0*self%L**2) )
+            self%B(comp,i,j,k) = self%b0 * exp( -((z-self%x3_0)**2/(2*self%L**2) ))
           end do
         end do
       end do
@@ -265,7 +287,9 @@ module mod_MagneticField
     character(len=:), allocatable :: t
     t = trim(adjustl(s)); call to_lower_inplace(t)
     select case (t)
-    case('gaussian'); decode_field_type = MFIELD_GAUSSIAN
+    case('gaussianx'); decode_field_type = MFIELD_GAUSSIAN_X
+    case('gaussiany'); decode_field_type = MFIELD_GAUSSIAN_Y
+    case('gaussianz'); decode_field_type = MFIELD_GAUSSIAN_Z
     case('map');      decode_field_type = MFIELD_MAP
     case default;     decode_field_type = MFIELD_NONE
     end select

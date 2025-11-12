@@ -7,7 +7,9 @@ project(LePIC LANGUAGES Fortran)
 set(CMAKE_Fortran_COMPILER mpiifx CACHE STRING "Fortran compiler (e.g., mpiifx)")
 
 # ---------------- Build type & flags ----------------
-set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type")
+endif()
 
 # Release flags (fast; using MKL and OpenMP)
 set(CMAKE_Fortran_FLAGS_RELEASE

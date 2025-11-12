@@ -7,11 +7,17 @@ module mod_io_hdf5
   ! Public generics
   public :: save_array_h5, load_array_h5
   public :: save_bcnd_h5,  load_bcnd_h5
+  public :: save_array_h5_wo_ghost
 
   ! ---------- Generic bindings (must be at module scope, before CONTAINS) ----------
   interface save_array_h5
      module procedure save_i32_1d, save_i32_2d, save_i32_3d
      module procedure save_r64_1d, save_r64_2d, save_r64_3d
+  end interface
+
+  interface save_array_h5_wo_ghost
+     module procedure save_i32_1d_wo_ghost, save_i32_2d_wo_ghost, save_i32_3d_wo_ghost
+     module procedure save_r64_1d_wo_ghost, save_r64_2d_wo_ghost, save_r64_3d_wo_ghost
   end interface
 
   interface load_array_h5
@@ -273,6 +279,191 @@ module mod_io_hdf5
     call save_core_real(filename, dset, A, [ int(size(A,1),HSIZE_T), int(size(A,2),HSIZE_T), int(size(A,3),HSIZE_T) ], origin, spacing, nghost, replace)
   end subroutine
 
+  ! =========================================================
+  ! === Save WITHOUT ghost cells ===========================
+  ! =========================================================
+
+  subroutine save_i32_1d_wo_ghost(filename, dset, A, origin, spacing, nghost, replace)
+    character(*),               intent(in) :: filename, dset
+    integer(int32),             intent(in) :: A(:)
+    real(real64), dimension(3), intent(in), optional :: origin, spacing
+    integer(int32),             intent(in), optional :: nghost
+    logical,                    intent(in), optional :: replace
+    integer           :: ngh, iL, iU, n_tot
+    integer(HSIZE_T)  :: dims_h5(1)
+    integer(int32), allocatable :: tmp(:)
+
+    ngh = 0; if (present(nghost)) ngh = nghost
+    n_tot = ubound(A,1) - lbound(A,1) + 1
+    if (2*ngh >= n_tot) error stop 'save_i32_1d_wo_ghost: nghost too large'
+
+    iL = lbound(A,1) + ngh
+    iU = ubound(A,1) - ngh
+    allocate(tmp(iU-iL+1))
+    tmp = A(iL:iU)
+    dims_h5(1) = int(size(tmp,1), HSIZE_T)
+
+    if (present(replace)) then
+      call save_core_int(filename, dset, tmp, dims_h5, origin, spacing, 0_int32, replace)
+    else
+      call save_core_int(filename, dset, tmp, dims_h5, origin, spacing, 0_int32)
+    end if
+    deallocate(tmp)
+  end subroutine save_i32_1d_wo_ghost
+
+
+  subroutine save_i32_2d_wo_ghost(filename, dset, A, origin, spacing, nghost, replace)
+    character(*),               intent(in) :: filename, dset
+    integer(int32),             intent(in) :: A(:,:)
+    real(real64), dimension(3), intent(in), optional :: origin, spacing
+    integer(int32),             intent(in), optional :: nghost
+    logical,                    intent(in), optional :: replace
+    integer           :: ngh
+    integer           :: iL, iU, jL, jU, nx_tot, ny_tot
+    integer(HSIZE_T)  :: dims_h5(2)
+    integer(int32), allocatable :: tmp(:,:)
+
+    ngh = 0; if (present(nghost)) ngh = nghost
+    nx_tot = ubound(A,1) - lbound(A,1) + 1
+    ny_tot = ubound(A,2) - lbound(A,2) + 1
+    if (2*ngh >= nx_tot .or. 2*ngh >= ny_tot) error stop 'save_i32_2d_wo_ghost: nghost too large'
+
+    iL = lbound(A,1) + ngh; iU = ubound(A,1) - ngh
+    jL = lbound(A,2) + ngh; jU = ubound(A,2) - ngh
+    allocate(tmp(iU-iL+1, jU-jL+1))
+    tmp = A(iL:iU, jL:jU)
+    dims_h5 = [int(size(tmp,1),HSIZE_T), int(size(tmp,2),HSIZE_T)]
+
+    if (present(replace)) then
+      call save_core_int(filename, dset, tmp, dims_h5, origin, spacing, 0_int32, replace)
+    else
+      call save_core_int(filename, dset, tmp, dims_h5, origin, spacing, 0_int32)
+    end if
+    deallocate(tmp)
+  end subroutine save_i32_2d_wo_ghost
+
+
+  subroutine save_i32_3d_wo_ghost(filename, dset, A, origin, spacing, nghost, replace)
+    character(*),               intent(in) :: filename, dset
+    integer(int32),             intent(in) :: A(:,:,:)
+    real(real64), dimension(3), intent(in), optional :: origin, spacing
+    integer(int32),             intent(in), optional :: nghost
+    logical,                    intent(in), optional :: replace
+    integer           :: ngh, iL, iU, jL, jU, kL, kU
+    integer           :: nx_tot, ny_tot, nz_tot
+    integer(HSIZE_T)  :: dims_h5(3)
+    integer(int32), allocatable :: tmp(:,:,:)
+
+    ngh = 0; if (present(nghost)) ngh = nghost
+    nx_tot = ubound(A,1)-lbound(A,1)+1; ny_tot = ubound(A,2)-lbound(A,2)+1; nz_tot = ubound(A,3)-lbound(A,3)+1
+    if (2*ngh >= nx_tot .or. 2*ngh >= ny_tot .or. 2*ngh >= nz_tot) error stop 'save_i32_3d_wo_ghost: nghost too large'
+
+    iL=lbound(A,1)+ngh; iU=ubound(A,1)-ngh
+    jL=lbound(A,2)+ngh; jU=ubound(A,2)-ngh
+    kL=lbound(A,3)+ngh; kU=ubound(A,3)-ngh
+
+    allocate(tmp(iU-iL+1,jU-jL+1,kU-kL+1))
+    tmp = A(iL:iU, jL:jU, kL:kU)
+    dims_h5 = [int(size(tmp,1),HSIZE_T), int(size(tmp,2),HSIZE_T), int(size(tmp,3),HSIZE_T)]
+
+    if (present(replace)) then
+      call save_core_int(filename, dset, tmp, dims_h5, origin, spacing, 0_int32, replace)
+    else
+      call save_core_int(filename, dset, tmp, dims_h5, origin, spacing, 0_int32)
+    end if
+    deallocate(tmp)
+  end subroutine save_i32_3d_wo_ghost
+
+
+  subroutine save_r64_1d_wo_ghost(filename, dset, A, origin, spacing, nghost, replace)
+    character(*),               intent(in) :: filename, dset
+    real(real64),               intent(in) :: A(:)
+    real(real64), dimension(3), intent(in), optional :: origin, spacing
+    integer(int32),             intent(in), optional :: nghost
+    logical,                    intent(in), optional :: replace
+    integer           :: ngh, iL, iU, n_tot
+    integer(HSIZE_T)  :: dims_h5(1)
+    real(real64), allocatable :: tmp(:)
+
+    ngh = 0; if (present(nghost)) ngh = nghost
+    n_tot = ubound(A,1) - lbound(A,1) + 1
+    if (2*ngh >= n_tot) error stop 'save_r64_1d_wo_ghost: nghost too large'
+
+    iL = lbound(A,1) + ngh; iU = ubound(A,1) - ngh
+    allocate(tmp(iU-iL+1))
+    tmp = A(iL:iU)
+    dims_h5(1) = int(size(tmp,1), HSIZE_T)
+
+    if (present(replace)) then
+      call save_core_real(filename, dset, tmp, dims_h5, origin, spacing, 0_int32, replace)
+    else
+      call save_core_real(filename, dset, tmp, dims_h5, origin, spacing, 0_int32)
+    end if
+    deallocate(tmp)
+  end subroutine save_r64_1d_wo_ghost
+
+
+  subroutine save_r64_2d_wo_ghost(filename, dset, A, origin, spacing, nghost, replace)
+    character(*),               intent(in) :: filename, dset
+    real(real64),               intent(in) :: A(:,:)
+    real(real64), dimension(3), intent(in), optional :: origin, spacing
+    integer(int32),             intent(in), optional :: nghost
+    logical,                    intent(in), optional :: replace
+    integer           :: ngh, iL, iU, jL, jU, nx_tot, ny_tot
+    integer(HSIZE_T)  :: dims_h5(2)
+    real(real64), allocatable :: tmp(:,:)
+
+    ngh = 0; if (present(nghost)) ngh = nghost
+    nx_tot = ubound(A,1)-lbound(A,1)+1; ny_tot = ubound(A,2)-lbound(A,2)+1
+    if (2*ngh >= nx_tot .or. 2*ngh >= ny_tot) error stop 'save_r64_2d_wo_ghost: nghost too large'
+
+    iL=lbound(A,1)+ngh; iU=ubound(A,1)-ngh
+    jL=lbound(A,2)+ngh; jU=ubound(A,2)-ngh
+    allocate(tmp(iU-iL+1,jU-jL+1))
+    tmp = A(iL:iU, jL:jU)
+    dims_h5 = [int(size(tmp,1),HSIZE_T), int(size(tmp,2),HSIZE_T)]
+
+    if (present(replace)) then
+      call save_core_real(filename, dset, tmp, dims_h5, origin, spacing, 0_int32, replace)
+    else
+      call save_core_real(filename, dset, tmp, dims_h5, origin, spacing, 0_int32)
+    end if
+    deallocate(tmp)
+  end subroutine save_r64_2d_wo_ghost
+
+
+  subroutine save_r64_3d_wo_ghost(filename, dset, A, origin, spacing, nghost, replace)
+    character(*),               intent(in) :: filename, dset
+    real(real64),               intent(in) :: A(:,:,:)
+    real(real64), dimension(3), intent(in), optional :: origin, spacing
+    integer(int32),             intent(in), optional :: nghost
+    logical,                    intent(in), optional :: replace
+    integer           :: ngh, iL, iU, jL, jU, kL, kU
+    integer           :: nx_tot, ny_tot, nz_tot
+    integer(HSIZE_T)  :: dims_h5(3)
+    real(real64), allocatable :: tmp(:,:,:)
+
+    ngh = 0; if (present(nghost)) ngh = nghost
+    nx_tot = ubound(A,1)-lbound(A,1)+1; ny_tot = ubound(A,2)-lbound(A,2)+1; nz_tot = ubound(A,3)-lbound(A,3)+1
+    if (2*ngh >= nx_tot .or. 2*ngh >= ny_tot .or. 2*ngh >= nz_tot) error stop 'save_r64_3d_wo_ghost: nghost too large'
+
+    iL=lbound(A,1)+ngh; iU=ubound(A,1)-ngh
+    jL=lbound(A,2)+ngh; jU=ubound(A,2)-ngh
+    kL=lbound(A,3)+ngh; kU=ubound(A,3)-ngh
+
+    allocate(tmp(iU-iL+1,jU-jL+1,kU-kL+1))
+    tmp = A(iL:iU, jL:jU, kL:kU)
+    dims_h5 = [int(size(tmp,1),HSIZE_T), int(size(tmp,2),HSIZE_T), int(size(tmp,3),HSIZE_T)]
+
+    if (present(replace)) then
+      call save_core_real(filename, dset, tmp, dims_h5, origin, spacing, 0_int32, replace)
+    else
+      call save_core_real(filename, dset, tmp, dims_h5, origin, spacing, 0_int32)
+    end if
+    deallocate(tmp)
+  end subroutine save_r64_3d_wo_ghost
+
+
 
   ! ==========================
   ! === Core load helpers  ===
@@ -445,6 +636,18 @@ module mod_io_hdf5
     integer(int32),             intent(out), optional :: nghost
     call load_core_real(filename, dset, A, origin, spacing, nghost)
   end subroutine
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   ! ==========================

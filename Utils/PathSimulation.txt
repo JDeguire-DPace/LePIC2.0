@@ -1,5 +1,5 @@
 Conditions = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/NewInputs/conditions.inp
-Particles = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/NewInputs/deuterium.dat
+Particles = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/NewInputs/special.dat
 Geometry = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/NewInputs/geometry.inp
 Boundary = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/NewInputs/boundary.inp
 Field = /mnt/c/Users/Jasmin Deguire/LePIC2.0/Inputs/NewInputs/magnetic_field.inp

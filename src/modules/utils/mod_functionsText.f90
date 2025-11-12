@@ -5,6 +5,7 @@ module mod_functionsText
 
     public parse_path, parse_value_after_equal, split_ws, to_lower
     public next_data_line, is_single_integer,strip_inline_comment
+    public is_dashed
 
     contains
         subroutine parse_path(line, filename)
@@ -18,6 +19,28 @@ module mod_functionsText
         filename = ''
         end if
     end subroutine parse_path
+
+    pure logical function is_dashed(line)
+        implicit none
+        character(len=*), intent(in) :: line
+        character(len=:), allocatable :: trimmed
+        integer :: i, n, dash_count
+
+        trimmed = adjustl(trim(line))
+        n = len_trim(trimmed)
+        if (n < 4) then
+            is_dashed = .false.
+            return
+        end if
+
+        dash_count = 0
+        do i = 1, n
+            if (trimmed(i:i) == '-') dash_count = dash_count + 1
+        end do
+
+        ! Consider "dashed" if at least 4 '-' characters are present
+        is_dashed = (dash_count >= 4)
+    end function is_dashed
 
     subroutine parse_value_after_equal(line, outvalue)
         character(len=*), intent(in)  :: line
@@ -119,23 +142,25 @@ module mod_functionsText
         end do
     end subroutine split_ws
 
-    function is_single_integer(s)
-        logical :: is_single_integer
+    logical function is_single_integer(s) result(ok)
         character(len=*), intent(in) :: s
-        integer :: a, b, ios1, ios2
-        character(len=:), allocatable :: t
-        t = trim(adjustl(s))
-        if (len_trim(t) == 0) then
-        is_single_integer = .false.; return
+        character(len=1024) :: buf
+        integer :: v, ios1, ios2
+        character(len=32) :: extra
+
+        buf = adjustl(trim(s))
+        if (len_trim(buf) == 0) then
+            ok = .false.; return
         end if
-        ! Try to read TWO ints: if that works, not a single integer line
-        ios2 = 0; read(t,*,iostat=ios2) a, b
-        if (ios2 == 0) then
-        is_single_integer = .false.; return
+
+        read(buf, *, iostat=ios1) v
+        if (ios1 /= 0) then
+            ok = .false.; return
         end if
-        ! Try to read ONE int: if that works, treat as sentinel
-        ios1 = 0; read(t,*,iostat=ios1) a
-        is_single_integer = (ios1 == 0)
+
+        ! Check there isn't a second token
+        read(buf, *, iostat=ios2) v, extra
+        ok = (ios2 /= 0)
     end function is_single_integer
 
     subroutine strip_inline_comment(line)

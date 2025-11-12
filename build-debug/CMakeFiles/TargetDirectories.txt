@@ -1,0 +1,4 @@
+/mnt/c/Users/Jasmin Deguire/LePIC2.0/build-debug/CMakeFiles/run_pic3D.dir
+/mnt/c/Users/Jasmin Deguire/LePIC2.0/build-debug/CMakeFiles/run.dir
+/mnt/c/Users/Jasmin Deguire/LePIC2.0/build-debug/CMakeFiles/edit_cache.dir
+/mnt/c/Users/Jasmin Deguire/LePIC2.0/build-debug/CMakeFiles/rebuild_cache.dir

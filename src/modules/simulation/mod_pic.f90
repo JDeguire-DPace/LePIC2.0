@@ -3,15 +3,15 @@ module mod_pic
   use mpi
   use mod_timer
   use mod_intro
-  use mod_InputFiles            ! read_particle_conditions, find_conditions_file
-  use mod_geometry             , only: Domain
-  use mod_boundary             , only: Boundary, build_boundary
-  use mod_io_hdf5              , only: save_array_h5, load_array_h5
+  use mod_InputFiles
+  use mod_geometry,     only: Domain
+  use mod_boundary,     only: Boundary, build_boundary
+  use mod_io_hdf5,      only: save_array_h5
   use mod_particles
   use mod_signals
   use mod_functionsText
-  ! NEW:
-  use mod_MagneticField        , only: MagneticField
+  use mod_MagneticField
+  use mod_collisions
   implicit none
   private
   public :: SimulationPIC
@@ -39,6 +39,10 @@ contains
     real(real64) :: origin_B(3)  , spacing_B(3)
     integer(int32) :: ngh_dom
 
+    ! ---- Collisions ----
+    type(ReactionSet) :: reactions
+    real(real64), allocatable :: sigv_max(:)
+
     ! ---- Species / particles ----
     type(SpeciesTable) :: table_species
     type(Particle), allocatable :: parts(:)
@@ -55,7 +59,7 @@ contains
     if (rank_local == 0) call print_introduction()
 
     ! ------------------------------------------------------------------
-    ! Geometry (nx,ny,nz, extents in meters)
+    ! Geometry
     ! ------------------------------------------------------------------
     call dom%read_geometry()
 
@@ -68,7 +72,7 @@ contains
 
     origin_dom  = [0.0_real64, 0.0_real64, 0.0_real64]
     spacing_dom = [dom%dx1, dom%dx2, dom%dx3]
-    ngh_dom     = dom%ncell_ghost
+    ngh_dom     = 2   ! ghost layers used by boundary arrays [0:n+2]
 
     ! ------------------------------------------------------------------
     ! Scalar particle conditions (for logging)
@@ -84,7 +88,8 @@ contains
     end if
 
     ! ------------------------------------------------------------------
-    ! Boundary (build bcnd/phi from geometry+boundary.inp) and save
+    ! Boundary (bcnd/phi from geometry+boundary.inp)
+    !   - New build_boundary: interior = -1, only surfaces painted (>0)
     ! ------------------------------------------------------------------
     call build_boundary(bnd, dom)
 
@@ -93,11 +98,7 @@ contains
       write(output_unit,'(A,3(I0,1X))') '  size(bcnd) = ', size(bnd%bcnd,1), size(bnd%bcnd,2), size(bnd%bcnd,3)
       call flush(output_unit)
     end if
-
-    call save_array_h5("./Outputs/state.h5","bcnd", bnd%bcnd, origin_dom, spacing_dom, ngh_dom, replace=.true.)
-    call save_array_h5("./Outputs/state.h5","phi" , bnd%phi , origin_dom, spacing_dom, ngh_dom, replace=.true.)
-    call save_array_h5("./Outputs/state.h5","wall_type", bnd%wall_type, replace=.true.)
-    call save_array_h5("./Outputs/state.h5","potential_from_boundary", bnd%potential_from_boundary, replace=.true.)
+    ! Note: build_boundary already saved /bcnd, /phi, /wall_type, /potential_from_boundary
 
     ! ------------------------------------------------------------------
     ! Magnetic field (background map or analytic)
@@ -106,13 +107,11 @@ contains
     call bkgB%allocate_arrays()
     call bkgB%build_field()
 
-    ! spacing/origin for B-grid (can differ from domain)
     spacing_B = [ (bkgB%x1_max - bkgB%x1_min) / real(max(1,bkgB%nx1-1), real64), &
                   (bkgB%x2_max - bkgB%x2_min) / real(max(1,bkgB%nx2-1), real64), &
                   (bkgB%x3_max - bkgB%x3_min) / real(max(1,bkgB%nx3-1), real64) ]
     origin_B  = [ bkgB%x1_min, bkgB%x2_min, bkgB%x3_min ]
 
-    ! save B-components separately (HDF5 commonly expects rank-3)
     allocate(b1(bkgB%nx1, bkgB%nx2, bkgB%nx3))
     allocate(b2(bkgB%nx1, bkgB%nx2, bkgB%nx3))
     allocate(b3(bkgB%nx1, bkgB%nx2, bkgB%nx3))
@@ -147,8 +146,12 @@ contains
       call flush(output_unit)
     end if
 
+    call load_reactions_from_file(reactions, table_species)
+    call compute_sigv_ceiling_all(reactions, table_species, sigv_max)  ! for null-collision ceiling
+
+
     ! ------------------------------------------------------------------
-    ! Main loop (placeholder for now)
+    ! Main loop (placeholder)
     ! ------------------------------------------------------------------
     do it = 0, 200
       if (rank_local==0 .and. mod(it,50)==0) then
@@ -156,13 +159,7 @@ contains
         call flush(output_unit)
       end if
       if (stop_requested) exit
-      ! TODO:
-      !  - deposit charge from parts -> rho (grid)
-      !  - solve Poisson -> phi (use dom/bnd)
-      !  - E = -grad(phi)
-      !  - push particles with (E, B from bkgB)
-      !  - collisions / sources
-      !  - diagnostics / saves
+      ! TODO: solver/advance/diagnostics
     end do
 
     ! ------------------------------------------------------------------
@@ -176,6 +173,6 @@ contains
 
     deallocate(b1, b2, b3)
     call MPI_Finalize(ierr_mpi)
-
   end subroutine SimulationPIC
+
 end module mod_pic
