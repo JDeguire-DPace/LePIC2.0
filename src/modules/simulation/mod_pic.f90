@@ -3,54 +3,37 @@ module mod_pic
   use mpi
   use mod_timer
   use mod_intro
-  use mod_InputFiles
+  use mod_InputFiles,   only: find_conditions_file, find_magneticfield_file
   use mod_geometry,     only: Domain
   use mod_boundary,     only: Boundary, build_boundary
   use mod_io_hdf5,      only: save_array_h5
   use mod_particles
   use mod_signals
-  use mod_functionsText
   use mod_MagneticField
-  use mod_collisions
+  use mod_reactions
   implicit none
   private
   public :: SimulationPIC
-
 contains
-
   subroutine SimulationPIC()
     implicit none
-    ! ---- MPI / timing ----
     integer :: ierr_mpi, rank_local, nproc_mpi
     type(Timer) :: timer_simulation
-
-    ! ---- Physics inputs (for logging only) ----
     real(real64) :: Te_eV, ne_m3, ngas_m3
     integer(int32) :: np_cell
-
-    ! ---- Geometry & boundary ----
     type(Domain)   :: dom
     type(Boundary) :: bnd
-
-    ! ---- Magnetic field ----
     type(MagneticField) :: bkgB
     real(real64), allocatable :: b1(:,:,:), b2(:,:,:), b3(:,:,:)
     real(real64) :: origin_dom(3), spacing_dom(3)
     real(real64) :: origin_B(3)  , spacing_B(3)
     integer(int32) :: ngh_dom
-
-    ! ---- Collisions ----
-    type(ReactionSet) :: reactions
+    type(ReactionSet) :: reactSet
     real(real64), allocatable :: sigv_max(:)
-
-    ! ---- Species / particles ----
     type(SpeciesTable) :: table_species
     type(Particle), allocatable :: parts(:)
     integer :: it
 
-    ! ------------------------------------------------------------------
-    ! Init
-    ! ------------------------------------------------------------------
     call MPI_Init(ierr_mpi)
     call MPI_Comm_rank(MPI_COMM_WORLD, rank_local, ierr_mpi)
     call MPI_Comm_size(MPI_COMM_WORLD, nproc_mpi, ierr_mpi)
@@ -58,25 +41,19 @@ contains
     call timer_simulation%reset(); call timer_simulation%start()
     if (rank_local == 0) call print_introduction()
 
-    ! ------------------------------------------------------------------
-    ! Geometry
-    ! ------------------------------------------------------------------
+    ! ----------------- Geometry -----------------
     call dom%read_geometry()
-
     if (rank_local == 0) then
       write(output_unit,*) 'Geometry:'
       write(output_unit,'(A,3(I0,1X))') '  ncell = ', dom%ncell_x1, dom%ncell_x2, dom%ncell_x3
       write(output_unit,'(A,3(ES12.4,1X))') '  dx,dy,dz (m) = ', dom%dx1, dom%dx2, dom%dx3
       call flush(output_unit)
     end if
-
     origin_dom  = [0.0_real64, 0.0_real64, 0.0_real64]
     spacing_dom = [dom%dx1, dom%dx2, dom%dx3]
-    ngh_dom     = 2   ! ghost layers used by boundary arrays [0:n+2]
+    ngh_dom     = 2
 
-    ! ------------------------------------------------------------------
-    ! Scalar particle conditions (for logging)
-    ! ------------------------------------------------------------------
+    ! -------------- Scalar conditions -----------
     call read_particle_conditions(find_conditions_file(), Te_eV, ne_m3, ngas_m3, np_cell)
     if (rank_local == 0) then
       write(output_unit,*) 'Plasma/gas (from conditions.inp):'
@@ -87,22 +64,15 @@ contains
       call flush(output_unit)
     end if
 
-    ! ------------------------------------------------------------------
-    ! Boundary (bcnd/phi from geometry+boundary.inp)
-    !   - New build_boundary: interior = -1, only surfaces painted (>0)
-    ! ------------------------------------------------------------------
+    ! ----------------- Boundary -----------------
     call build_boundary(bnd, dom)
-
     if (rank_local == 0) then
       write(output_unit,*) 'Boundary built:'
       write(output_unit,'(A,3(I0,1X))') '  size(bcnd) = ', size(bnd%bcnd,1), size(bnd%bcnd,2), size(bnd%bcnd,3)
       call flush(output_unit)
     end if
-    ! Note: build_boundary already saved /bcnd, /phi, /wall_type, /potential_from_boundary
 
-    ! ------------------------------------------------------------------
-    ! Magnetic field (background map or analytic)
-    ! ------------------------------------------------------------------
+    ! -------------- Magnetic field --------------
     call bkgB%read_from_file( trim(find_magneticfield_file()) )
     call bkgB%allocate_arrays()
     call bkgB%build_field()
@@ -132,9 +102,7 @@ contains
       call flush(output_unit)
     end if
 
-    ! ------------------------------------------------------------------
-    ! Species & particles (no domain decomposition yet)
-    ! ------------------------------------------------------------------
+    ! ----------------- Species/particles -----------------
     call load_species_from_file(table_species)
     call build_particles_from_species_domain(table_species, dom, parts)
 
@@ -146,33 +114,45 @@ contains
       call flush(output_unit)
     end if
 
-    call load_reactions_from_file(reactions, table_species)
-    call compute_sigv_ceiling_all(reactions, table_species, sigv_max)  ! for null-collision ceiling
+    call MPI_Barrier(MPI_COMM_WORLD, ierr_mpi)
 
+    ! ----------------- Reactions phase -----------------
+    if (rank_local == 0) then
+      write(output_unit,'(A)') 'Loading reactions...'
+      call flush(output_unit)
+    end if
 
-    ! ------------------------------------------------------------------
-    ! Main loop (placeholder)
-    ! ------------------------------------------------------------------
+    call load_reactions_from_file(reactSet, table_species)
+    call compute_sigv_ceiling_all(reactSet, table_species, sigv_max)
+
+    if (rank_local == 0) then
+      call write_reactions_to_particles_out(reactSet, table_species, .true.)
+      write(output_unit,'(A,I0)') 'Reactions loaded (count) = ', count_reactions(reactSet)
+      call flush(output_unit)
+    end if
+
+    call MPI_Barrier(MPI_COMM_WORLD, ierr_mpi)
+
+    ! ----------------- Main loop (placeholder) -----------------
     do it = 0, 200
       if (rank_local==0 .and. mod(it,50)==0) then
         write(output_unit,'(A,I0)') 'timestep = ', it
         call flush(output_unit)
       end if
       if (stop_requested) exit
-      ! TODO: solver/advance/diagnostics
     end do
 
-    ! ------------------------------------------------------------------
-    ! Wrap up
-    ! ------------------------------------------------------------------
     call timer_simulation%stop()
     if (rank_local==0) then
       write(output_unit,*) 'Elapsed time (s): ', timer_simulation%elapsed_s()
       call flush(output_unit)
     end if
 
-    deallocate(b1, b2, b3)
+    if (allocated(b1))        deallocate(b1)
+    if (allocated(b2))        deallocate(b2)
+    if (allocated(b3))        deallocate(b3)
+    if (allocated(sigv_max))  deallocate(sigv_max)
+
     call MPI_Finalize(ierr_mpi)
   end subroutine SimulationPIC
-
 end module mod_pic
