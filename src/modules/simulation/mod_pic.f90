@@ -1,6 +1,7 @@
 module mod_pic
   use iso_fortran_env, only: real64, int32, output_unit
   use mpi
+  use hdf5
   use mod_timer
   use mod_intro
   use mod_InputFiles,   only: find_conditions_file, find_magneticfield_file
@@ -90,8 +91,8 @@ contains
     b3 = bkgB%B(3,:,:,:)
 
     call save_array_h5("./Outputs/state.h5","B1", b1, origin_B, spacing_B, 0, replace=.true.)
-    call save_array_h5("./Outputs/state.h5","B2", b2, origin_B, spacing_B, 0, replace=.false.)
-    call save_array_h5("./Outputs/state.h5","B3", b3, origin_B, spacing_B, 0, replace=.false.)
+    call save_array_h5("./Outputs/state.h5","B2", b2, origin_B, spacing_B, 0, replace=.true.)
+    call save_array_h5("./Outputs/state.h5","B3", b3, origin_B, spacing_B, 0, replace=.true.)
 
     if (rank_local == 0) then
       write(output_unit,*) 'Magnetic field loaded:'

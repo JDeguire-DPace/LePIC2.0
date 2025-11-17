@@ -1,6 +1,17 @@
+# Ifx compiler
+# rm -rf build
+# cmake -S . -B build \
+#   -DCMAKE_Fortran_COMPILER=mpiifx \
+#   -DCMAKE_BUILD_TYPE=Debug \
+#   -DHDF5_ROOT=/opt/hdf5-ifx
+# cmake --build build -j
+
+# GNU compiler
+find Src -type f \( -name "*.mod" -o -name "*.smod" \) -delete
 rm -rf build
 cmake -S . -B build \
-  -DCMAKE_Fortran_COMPILER=mpiifx \
+  -DCMAKE_Fortran_COMPILER=mpifort \
   -DCMAKE_BUILD_TYPE=Debug \
-  -DHDF5_ROOT=/opt/hdf5-ifx
+  -DHDF5_ROOT=/usr/lib/x86_64-linux-gnu/hdf5/openmpi \
+  -DHDF5_DIR=/usr/lib/x86_64-linux-gnu/cmake/hdf5
 cmake --build build -j

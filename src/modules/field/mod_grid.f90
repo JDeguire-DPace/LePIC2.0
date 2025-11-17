@@ -1,5 +1,7 @@
 module mod_grid
     use iso_fortran_env
+    use mpi
+    use hdf5
     use mod_geometry
     implicit none
     private

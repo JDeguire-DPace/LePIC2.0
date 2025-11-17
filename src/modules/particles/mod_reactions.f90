@@ -7,11 +7,13 @@
 !==============================================================
 module mod_reactions
   use iso_fortran_env, only: real64, int32, output_unit
+  use mpi
+  use hdf5
   use iso_c_binding,   only: c_int
   use mod_InputFiles,  only: find_particles_file
   use mod_functionsText                 ! expects: is_dashed()
   use mod_particles,   only: SpeciesTable, species_index_of
-  use mpi
+  
   implicit none
   private
 
@@ -80,7 +82,10 @@ contains
   subroutine load_reactions_from_file(out_reactions, species_catalog)
     type(ReactionSet), intent(out) :: out_reactions
     type(SpeciesTable),intent(in)  :: species_catalog
+    integer :: rank_local, ierr
     integer :: u, ios
+
+    call MPI_Comm_rank(MPI_COMM_WORLD, rank_local, ierr)
 
     if (allocated(out_reactions%list)) deallocate(out_reactions%list)
     allocate(out_reactions%list(0))
@@ -90,8 +95,9 @@ contains
 
     call parse_all_reactions(u, out_reactions, species_catalog)
     close(u)
-
-    write(output_unit,'(A,I0)') 'Reactions loaded = ', count_reactions(out_reactions)
+    if (rank_local == 0) then
+      write(output_unit,'(A,I0)') 'Reactions loaded = ', count_reactions(out_reactions)
+    end if
     call flush(output_unit)
   end subroutine load_reactions_from_file
 
@@ -287,7 +293,7 @@ contains
     character(len=:), allocatable :: lhs, rhs
     character(len=256) :: token_list(128)
     integer :: n_tok, i, idx, ierr, rank0
-
+    
     call MPI_Comm_rank(MPI_COMM_WORLD, rank0, ierr)
 
     call split_by_arrow(trim(label), lhs, rhs)

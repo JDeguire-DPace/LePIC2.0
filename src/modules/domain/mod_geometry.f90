@@ -1,5 +1,7 @@
 module mod_geometry
   use iso_fortran_env, only: real64, int16, int32
+  use mpi
+  use hdf5
   use mod_inputfiles, only: find_geometry_file
   use mod_functionsText
   implicit none
