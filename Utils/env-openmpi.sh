@@ -4,6 +4,8 @@
 # 1) Remove Intel MPI from this shell, if present
 export PATH="$(printf "%s" "$PATH" | tr ':' '\n' | grep -v '/oneapi/mpi/' | paste -sd: -)"
 export LD_LIBRARY_PATH="$(printf "%s" "${LD_LIBRARY_PATH:-}" | tr ':' '\n' | grep -v '/oneapi/mpi/' | paste -sd: -)"
+export LIBRARY_PATH="$(printf "%s" "${LIBRARY_PATH:-}" | tr ':' '\n' | grep -v '/oneapi/mpi/' | paste -sd: -)"
+export CPATH="$(printf "%s" "${CPATH:-}" | tr ':' '\n' | grep -v '/oneapi/mpi/' | paste -sd: -)"
 
 # 2) Ensure OpenMPI is first
 export PATH="/usr/bin:${PATH}"
@@ -14,6 +16,8 @@ export FC=mpifort
 export TYPE="${TYPE:-Debug}"
 export HDF5_ROOT="/usr/lib/x86_64-linux-gnu/hdf5/openmpi"
 export HDF5_DIR="/usr/lib/x86_64-linux-gnu/cmake/hdf5"
+
+source "../environnements/myenv/bin/activate"
 
 echo "[env-openmpi] FC=$FC  TYPE=$TYPE"
 command -v mpifort >/dev/null && mpifort --version | head -1 || true

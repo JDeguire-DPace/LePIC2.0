@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 rm -f Outputs/state.h5
 set -euo pipefail
-NP="${1:-4}"
-
-python3 Utils/SetupGUI.py
-
+# Path to the executable built by CMake
 BIN="build/bin/run_pic3D"
 
-if [[ ! -x "$BIN" ]]; then
-  echo "Error: $BIN not found. Build first: ./config.sh" >&2
-  exit 1
-fi
+# Allow overriding mpirun (for Intel MPI etc.)
+MPIRUN_BIN="${MPIRUN:-mpirun}"
+NP="${NP:-4}"
 
-echo "==> mpirun: $(command -v mpirun || echo 'not found')"
+echo "==> mpirun: $(command -v "${MPIRUN_BIN}" || echo "${MPIRUN_BIN} (not found)")"
 echo "==> Linked (ldd):"
-ldd "$BIN" | grep -E 'libmpi|hdf5' || true
+ldd "${BIN}" | grep -E 'hdf5|mpi' || true
 
-exec mpirun -np 4 -genv HDF5_USE_FILE_LOCKING=FALSE "$BIN"
+# Disable HDF5 file locking in a *portable* way
+export HDF5_USE_FILE_LOCKING=FALSE
+
+echo "==> Running: ${MPIRUN_BIN} -np ${NP} ${BIN}"
+exec "${MPIRUN_BIN}" -np 4 "${BIN}"
