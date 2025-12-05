@@ -1,0 +1,1 @@
+![LogoLePIC+](./logo/LePIC+.png)
