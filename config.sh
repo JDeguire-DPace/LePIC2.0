@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # Expect env files to set these; provide safe fallbacks
-: "${FC:=mpifort}"
-: "${TYPE:=Debug}"
-: "${HDF5_ROOT:=/usr/lib/x86_64-linux-gnu/hdf5/openmpi}"
-: "${HDF5_DIR:=/usr/lib/x86_64-linux-gnu/cmake/hdf5}"
+: "${FC:=mpiifx}"
+: "${TYPE:=BASE}"
+: "${HDF5_ROOT:=/opt/hdf5-ifx}"
+: "${HDF5_DIR:=/opt/hdf5-ifx/lib/cmake/hdf5}"
 
 echo "==> Cleaning build and stale .mod"
 find Src -type f \( -name '*.mod' -o -name '*.smod' \) -delete || true

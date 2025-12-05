@@ -33,7 +33,7 @@ done
 
 # CMake hints (adjust HDF5 path if different on your box)
 export FC=mpiifx
-export TYPE="${TYPE:-Debug}"
+export TYPE="${TYPE:-BASE}"
 export HDF5_ROOT="${HDF5_ROOT:-/opt/hdf5-ifx}"
 export HDF5_DIR="${HDF5_DIR:-$HDF5_ROOT/lib/cmake/hdf5}"
 

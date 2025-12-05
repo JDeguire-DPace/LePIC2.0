@@ -23,18 +23,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # --- Sources ---
 file(GLOB_RECURSE MODULE_SOURCES    CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Src/modules/*.f90")
-file(GLOB_RECURSE SUBMODULE_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Src/submodules/*.f90")
 file(GLOB_RECURSE OTHER_SOURCES     CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Src/*.f90")
-list(REMOVE_ITEM OTHER_SOURCES ${MODULE_SOURCES} ${SUBMODULE_SOURCES})
+list(REMOVE_ITEM OTHER_SOURCES ${MODULE_SOURCES})
 
-add_executable(run_pic3D ${MODULE_SOURCES} ${SUBMODULE_SOURCES} ${OTHER_SOURCES})
+add_executable(run_pic3D ${MODULE_SOURCES} ${OTHER_SOURCES})
 target_include_directories(run_pic3D PRIVATE ${CMAKE_Fortran_MODULE_DIRECTORY})
 
 target_compile_options(run_pic3D PRIVATE
   $<$<COMPILE_LANGUAGE:Fortran>:
     -ffree-line-length-none
-    -finput-charset=UTF-8
-    -fexec-charset=UTF-8
     -Wno-line-truncation
     -Wno-error=line-truncation>
 )
